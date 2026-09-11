@@ -259,6 +259,37 @@ public class ElytraCollector extends Module {
         .build()
     );
 
+    // ========== 搜索方向过滤 ==========
+    private final SettingGroup sgDirection = settings.createGroup("搜索方向");
+
+    private final Setting<Boolean> searchNorth = sgDirection.add(new BoolSetting.Builder()
+        .name("搜索北方")
+        .description("允许搜索以开始搜索时的位置为中心，北方（-Z）方向扇区内的末地船.")
+        .defaultValue(true)
+        .build()
+    );
+
+    private final Setting<Boolean> searchSouth = sgDirection.add(new BoolSetting.Builder()
+        .name("搜索南方")
+        .description("允许搜索以开始搜索时的位置为中心，南方（+Z）方向扇区内的末地船.")
+        .defaultValue(true)
+        .build()
+    );
+
+    private final Setting<Boolean> searchEast = sgDirection.add(new BoolSetting.Builder()
+        .name("搜索东方")
+        .description("允许搜索以开始搜索时的位置为中心，东方（+X）方向扇区内的末地船.")
+        .defaultValue(true)
+        .build()
+    );
+
+    private final Setting<Boolean> searchWest = sgDirection.add(new BoolSetting.Builder()
+        .name("搜索西方")
+        .description("允许搜索以开始搜索时的位置为中心，西方（-X）方向扇区内的末地船.")
+        .defaultValue(true)
+        .build()
+    );
+
     // ========== State Machine ==========
     private enum State { IDLE, SEARCHING, RISING, FLYING, LANDING, COLLECTING, DONE }
     private enum CollectStep { TO_P1, TO_P2, WAIT_SHULKER, TO_P3, HIT_FRAME, PICK_UP, EQUIP, EXIT_P1, EXIT_LANDING, LEAVE_SHIP }
@@ -343,6 +374,7 @@ public class ElytraCollector extends Module {
     private final Set<Item> takeFailedItems = new HashSet<>(); // 背包满且无杂物可腾导致拿不到的物品 (整个补货会话有效，防死循环重试)
     private int fillStuckSlot = -1;      // 存鞘翅最近一次 shift 点击的槽 (连续不动 = 盒子满)
     private int fillStuckTicks = 0;      // 该槽连续不动 tick
+    private int recoveryAttempts = 0;    // 容器界面异常连续恢复次数 (最多 3 次，之后停任务) — StorageRecovery
     private int openRetry = 0;           // 当前打开容器已尝试次数 (最多 5 次，间隔 1 秒)
     private int boxOpenClickTick = -1;   // 最近一次 vanilla 右键 (Utils.rightClick) 的 tick，用于判断点完是否已打开
     private boolean boxPurposeSupply = false; // 当前潜影盒用途: true=补货 false=存鞘翅
@@ -523,6 +555,16 @@ public class ElytraCollector extends Module {
             }
 
             if (searchCancelled || generation != searchGeneration) return;
+
+            // 方向过滤：按玩家所在位置的方位过滤 (北/南/东/西 独立开关，可只搜单方向)
+            {
+                int before = found.size();
+                boolean n = searchNorth.get(), s = searchSouth.get(), e = searchEast.get(), w = searchWest.get();
+                found.removeIf(t -> !com.fo.addon.utils.DirectionFilter.shouldKeep(px, pz, t.headPos.getX(), t.headPos.getZ(), n, s, e, w));
+                if (before != found.size()) {
+                    info("方向过滤: 候船 " + before + " → 保留 " + found.size() + " (北=" + n + " 南=" + s + " 东=" + e + " 西=" + w + ").");
+                }
+            }
 
             found.sort(Comparator.comparingInt(s ->
                 (s.headPos.getX() - px) * (s.headPos.getX() - px) + (s.headPos.getZ() - pz) * (s.headPos.getZ() - pz)
@@ -1102,11 +1144,24 @@ public class ElytraCollector extends Module {
                     equipElytra();
                 }
             }
-            case EXIT_P1 -> { if (reached(waypoints.p1, 2.5)) advance(CollectStep.EXIT_LANDING); }
+            case EXIT_P1 -> {
+                if (reached(waypoints.p1, 2.5)) {
+                    advance(CollectStep.EXIT_LANDING);
+                } else if (stateTick > 600) {
+                    // 走回降落点超时 (StorageReturn 语义：30s 走不到也继续，不卡死)
+                    warning("走回降落点超时 (30s)，跳过该步骤继续.");
+                    advance(CollectStep.EXIT_LANDING);
+                }
+            }
             case EXIT_LANDING -> {
                 if (reached(waypoints.landing, 2.5)) {
                     addBlacklist(current.headPos);
                     info("该船完成，加入黑名单.");
+                    finishShip();
+                } else if (stateTick > 600) {
+                    // 回不到降落点：直接完成该船 (黑名单跳过)，绝不卡死
+                    warning("回不到降落点 (30s)，该船加入黑名单跳过.");
+                    addBlacklist(current.headPos);
                     finishShip();
                 }
             }
@@ -1115,6 +1170,12 @@ public class ElytraCollector extends Module {
                 if (reached(waypoints.landing.down(4), 2.5)) {
                     releaseForward();
                     info("已回到降落点，起飞离开.");
+                    state = State.RISING;
+                    stateTick = 0;
+                } else if (stateTick > 600) {
+                    // 回降落点超时：原地起飞 (方向已由 takeoffFacing 修正)
+                    warning("回降落点超时 (30s)，原地起飞离开.");
+                    releaseForward();
                     state = State.RISING;
                     stateTick = 0;
                 }
@@ -1144,6 +1205,7 @@ public class ElytraCollector extends Module {
         recoveryYaw = 0f;
         recoverStageTick = 0;
         recoverCount = 0;
+        recoveryAttempts = 0;
         releaseForward();
         resetStorageClick();
         if (state != State.IDLE) state = State.IDLE;
@@ -1165,7 +1227,9 @@ public class ElytraCollector extends Module {
     }
 
     private void maybeStartSession() {
-        dumpNeeded = freeSlots() <= freeSlotDump.get();
+        // 存鞘翅触发条件：只要背包里有未穿戴鞘翅就存 (用户要求"取得一个鞘翅就自动存入潜影盒"，
+        // 不再等背包快满，防止鞘翅攒在背包里、也避免和补货抢空间)
+        dumpNeeded = countElytraMain() > 0;
         resupplyNeeded = anyDeficit();
         if (dumpNeeded || resupplyNeeded) {
             info("存储会话: 存鞘翅=" + dumpNeeded + ", 补货=" + resupplyNeeded);
@@ -1180,6 +1244,28 @@ public class ElytraCollector extends Module {
                     }
                 }
                 info(sb.toString().trim());
+            }
+            // 快捷路径：只存鞘翅 (无补货) 且背包有带空位潜影盒 → 直接放盒存，不用开末影箱
+            // (用户要求"取得一个鞘翅就自动存入潜影盒"，背包常备盒时最省事)
+            if (dumpNeeded && !resupplyNeeded) {
+                int bpBox = findBackpackBoxWithSpace();
+                if (bpBox != -1) {
+                    info("存储: 背包有可用潜影盒，直接放盒存鞘翅 (无需末影箱).");
+                    boxInventorySlot = bpBox;
+                    boxFromInventory = true;
+                    pickInvSlot = bpBox;
+                    boxPurposeSupply = false;
+                    ecPos = null;
+                    boxPos = null;
+                    storagePhase = StoragePhase.PLACE_BOX;
+                    storageTick = 0;
+                    supplyScanStart = 0;
+                    supplyPauseDump = false;
+                    resupplyRescan = false;
+                    releaseForward();
+                    PathManagers.get().stop();
+                    return;
+                }
             }
             storagePhase = StoragePhase.PLACE_EC;
             storageTick = 0;
@@ -1452,7 +1538,9 @@ supplyScanStart = 0;
             boxInventorySlot = pickInvSlot;
             boxFromInventory = false;
             pickStep = 0;
-            afterClose = StoragePhase.PLACE_BOX;
+            // 预取备用盒 (鞘翅已存完且无补货需求) → 盒子留在背包，会话直接结束；
+            // 正常取盒 (还有鞘翅/补货要处理) → 继续放置流程
+            afterClose = (dumpNeeded || resupplyNeeded) ? StoragePhase.PLACE_BOX : StoragePhase.MINE_EC;
             storagePhase = StoragePhase.CLOSE_SCREEN;
             storageTick = 0;
             return;
@@ -1501,6 +1589,19 @@ supplyScanStart = 0;
             dumpNeeded = countElytraMain() > 0;
         }
         if (!dumpNeeded && !resupplyNeeded) {
+            // 存完鞘翅且无补货需求：确保背包常备一个可用潜影盒 (用户要求"末影箱的空盒再拿一个出来")，
+            // 下一船捡到鞘翅时可直接放盒，不用再开末影箱
+            if (findBackpackBoxWithSpace() == -1) {
+                int spare = findEcBoxWithSpace(sh, rows);
+                if (spare != -1) {
+                    info("存储: 预取一个潜影盒进背包备用.");
+                    pickEcSlot = spare;
+                    boxPurposeSupply = false;
+                    pickStep = 1;
+                    moveQueue.add(new MoveOp(spare, -1)); // 拾取盒子到光标
+                    return;
+                }
+            }
             storagePhase = StoragePhase.MINE_EC;
             storageTick = 0;
             return;
@@ -1730,6 +1831,7 @@ supplyScanStart = 0;
         }
         if (isContainerOpen()) {
             if (storageTick < 3) return; // 等服务器同步潜影盒内容
+            recoveryAttempts = 0; // 界面恢复成功，清除异常计数
             storagePhase = boxPurposeSupply ? StoragePhase.TAKE_SUPPLIES : StoragePhase.FILL_BOX;
             storageTick = 0;
             openRetry = 0;
@@ -1758,7 +1860,18 @@ supplyScanStart = 0;
         var sh = mc.player.currentScreenHandler;
         int rows = currentRows();
         if (sh == null || rows <= 0) {
-            stopTask("潜影盒界面异常，停止任务.");
+            // StorageRecovery：界面未同步/异常 → 重试重开潜影盒 (最多 3 次)，不直接停任务
+            if (storageTick < 15) return;
+            recoveryAttempts++;
+            if (recoveryAttempts > 3) {
+                stopTask("潜影盒界面连续异常 (已重试 3 次)，停止任务.");
+                return;
+            }
+            warning("潜影盒界面尚未同步，等待后重新打开 (" + recoveryAttempts + "/3)...");
+            storagePhase = StoragePhase.OPEN_BOX;
+            storageTick = 0;
+            openRetry = 0;
+            boxOpenClickTick = -1;
             return;
         }
         if (storageTick < 3) return; // 等服务器同步潜影盒内容
@@ -1812,7 +1925,18 @@ supplyScanStart = 0;
         var sh = mc.player.currentScreenHandler;
         int rows = currentRows();
         if (sh == null || rows <= 0) {
-            stopTask("潜影盒界面异常，停止任务.");
+            // StorageRecovery：界面未同步/异常 → 重试重开潜影盒 (最多 3 次)，不直接停任务
+            if (storageTick < 15) return;
+            recoveryAttempts++;
+            if (recoveryAttempts > 3) {
+                stopTask("潜影盒界面连续异常 (已重试 3 次)，停止任务.");
+                return;
+            }
+            warning("潜影盒界面尚未同步，等待后重新打开 (" + recoveryAttempts + "/3)...");
+            storagePhase = StoragePhase.OPEN_BOX;
+            storageTick = 0;
+            openRetry = 0;
+            boxOpenClickTick = -1;
             return;
         }
         if (storageTick < 3) return; // 等服务器同步潜影盒内容
@@ -1921,6 +2045,11 @@ supplyScanStart = 0;
             } else {
                 boxInventorySlot = findBackpackShulkerBox();
             }
+            if (ecPos == null) {
+                // 快捷路径 (未放末影箱)：会话直接结束，无需挖末影箱
+                afterStorageSession();
+                return;
+            }
             storagePhase = (dumpNeeded || resupplyNeeded) ? StoragePhase.OPEN_EC : StoragePhase.MINE_EC;
             storageTick = 0;
             pickupWaitStart = -1;
@@ -1930,6 +2059,11 @@ supplyScanStart = 0;
             warning("潜影盒掉落未拾取，继续任务.");
             boxInventorySlot = -1;
             boxFromInventory = false;
+            if (ecPos == null) {
+                // 快捷路径：未放末影箱，直接结束会话
+                afterStorageSession();
+                return;
+            }
             storagePhase = (dumpNeeded || resupplyNeeded) ? StoragePhase.OPEN_EC : StoragePhase.MINE_EC;
             storageTick = 0;
             pickupWaitStart = -1;
