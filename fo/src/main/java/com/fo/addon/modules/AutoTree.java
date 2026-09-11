@@ -171,9 +171,7 @@ public class AutoTree extends Module {
             );
 
             if (action == TreeLogic.Action.BONEMEAL) {
-                InvUtils.swap(boneMeal.slot(), false);
-                clickBlock(pos.up(), Direction.DOWN);
-                InvUtils.swapBack();
+                clickBlockBoneMeal(pos.up(), Direction.DOWN, boneMeal.slot());
                 done++;
                 lastUseMs = System.currentTimeMillis();
             } else if (action == TreeLogic.Action.PLANT) {
@@ -192,17 +190,24 @@ public class AutoTree extends Module {
         }
     }
 
-    /** 静默转向并右键点击方块（对树苗使用骨粉） */
-    private void clickBlock(BlockPos pos, Direction side) {
+    /**
+     * 对树苗使用骨粉：静默转向后右键点击（催熟）。
+     * 必须在旋转回调内完成「切骨粉 → 右键 → 切回」，否则回调执行时槽位已变：
+     * ① swap 必须传 true 记录原槽位，swapBack 才能切回树苗（之前传 false 导致永远停在骨粉）
+     * ② swap/点击/swapBack 全部在回调里同步执行，保证点击瞬间手里就是骨粉
+     */
+    private void clickBlockBoneMeal(BlockPos pos, Direction side, int boneMealSlot) {
         Vec3d point = new Vec3d(
             pos.getX() + 0.5 + side.getVector().getX() * 0.5,
             pos.getY() + 0.5 + side.getVector().getY() * 0.5,
             pos.getZ() + 0.5 + side.getVector().getZ() * 0.5
         );
         Rotations.rotate(Rotations.getYaw(point), Rotations.getPitch(point), 100, () -> {
+            InvUtils.swap(boneMealSlot, true);
             mc.player.swingHand(Hand.MAIN_HAND);
             BlockHitResult result = new BlockHitResult(point, side, pos, false);
             mc.interactionManager.interactBlock(mc.player, Hand.MAIN_HAND, result);
+            InvUtils.swapBack();
         });
     }
 
