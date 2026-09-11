@@ -1201,6 +1201,12 @@ public class ElytraCollector extends Module {
     }
 
     // ========== 任务控制 (完成/停止/掉线/退出) ==========
+    // 自动断开服务器连接 (用户要求: 背包潜影盒也满了就自动下线 log 掉)
+    private void disconnect(String reason) {
+        if (mc.player == null || mc.player.networkHandler == null) return;
+        mc.player.networkHandler.getConnection().disconnect(Text.literal(reason));
+    }
+
     private void stopTask(String reason) {
         info(reason);
         searchCancelled = true;
@@ -1252,10 +1258,10 @@ public class ElytraCollector extends Module {
                 }
                 info(sb.toString().trim());
             }
-            // 快捷路径：只存鞘翅 (无补货) 且背包有带空位潜影盒 → 直接放盒存，不用开末影箱
-            // (用户要求"取得一个鞘翅就自动存入潜影盒"，背包常备盒时最省事)
+            // 快捷路径：只存鞘翅 (无补货) 且背包有可用鞘翅盒/空盒 → 直接放盒存，不用开末影箱
+            // (用户要求"取得一个鞘翅就自动存入潜影盒"，背包常备盒时最省事；只用鞘翅盒/空盒，绝不污染补给盒)
             if (dumpNeeded && !resupplyNeeded) {
-                int bpBox = findBackpackBoxWithSpace();
+                int bpBox = findBackpackElytraBox();
                 if (bpBox != -1) {
                     info("存储: 背包有可用潜影盒，直接放盒存鞘翅 (无需末影箱).");
                     boxInventorySlot = bpBox;
@@ -1598,7 +1604,7 @@ supplyScanStart = 0;
         if (!dumpNeeded && !resupplyNeeded) {
             // 存完鞘翅且无补货需求：确保背包常备一个可用潜影盒 (用户要求"末影箱的空盒再拿一个出来")，
             // 下一船捡到鞘翅时可直接放盒，不用再开末影箱 (受"自动拿空盒"开关控制)
-            if (autoTakeBox.get() && findBackpackBoxWithSpace() == -1) {
+            if (autoTakeBox.get() && findBackpackElytraBox() == -1) {
                 int spare = findEcBoxWithSpace(sh, rows);
                 if (spare != -1) {
                     info("存储: 预取一个潜影盒进背包备用.");
@@ -1614,8 +1620,8 @@ supplyScanStart = 0;
             return;
         }
         if (dumpNeeded) {
-            // 优先用背包里带空位的潜影盒
-            int bpBox = findBackpackBoxWithSpace();
+            // 优先用背包里可存鞘翅的潜影盒 (鞘翅盒/空盒，跳过补给盒)
+            int bpBox = findBackpackElytraBox();
             if (bpBox != -1) {
                 boxInventorySlot = bpBox;
                 boxFromInventory = true;
@@ -1634,13 +1640,12 @@ supplyScanStart = 0;
                 moveQueue.add(new MoveOp(ecBox, -1)); // 拾取盒子到光标
                 return;
             }
-            // 没有带空位的潜影盒：背包满则任务完成，否则鞘翅留背包
-            if (freeSlots() == 0) {
-                completeTask("背包与末影箱全部放满，任务完成.");
-                return;
-            }
-            info("没有空位潜影盒，鞘翅留在背包.");
-            dumpNeeded = false;
+            // 末影箱全是满盒、背包也没有可用鞘翅盒/空盒 (只剩补给盒或满盒)：
+            // 按用户要求自动下线保护——既不能把鞘翅塞进补给盒，也不能让鞘翅烂在背包
+            info("末影箱与背包均无可用潜影盒 (补给盒已保护)，自动下线.");
+            disconnect("FO 鞘翅采集: 末影箱与背包均无空潜影盒，自动下线保护");
+            stopTask("末影箱与背包均无可用潜影盒，已自动下线.");
+            return;
         }
         if (resupplyNeeded) {
             // 存鞘翅腾空间后重新从头扫描，补给盒 (已过游标) 才能被再次选中继续补货
@@ -2322,6 +2327,24 @@ supplyScanStart = 0;
             if (isShulkerBox(st) && shulkerUsedSlots(st) < 27) return i;
         }
         return -1;
+    }
+
+    // 找背包中可用于"存鞘翅"的盒 (修复: 绝不用补给盒)：
+    // ① 优先选盒内已有鞘翅且有空间 ② 其次选完全空的盒 ③ 跳过装其他物资的盒 (烟花/食物/图腾 = 补给盒)
+    private int findBackpackElytraBox() {
+        int emptyBox = -1;
+        for (int i = 0; i < 36; i++) {
+            ItemStack st = mc.player.getInventory().getMainStacks().get(i);
+            if (!isShulkerBox(st)) continue;
+            Set<Item> items = shulkerItems(st);
+            if (items.contains(Items.ELYTRA)) {
+                if (shulkerUsedSlots(st) < 27) return i; // 鞘翅盒有空间 → 直接用
+                continue;                                // 鞘翅满盒 → 不能用
+            }
+            if (items.isEmpty() && emptyBox == -1) emptyBox = i; // 完全空盒 → 备用
+            // 含其他物资(烟花/食物/图腾等) = 补给盒 → 跳过，绝不把鞘翅塞进补给盒
+        }
+        return emptyBox;
     }
 
     // 找背包里未穿戴的鞘翅槽位 (屏幕坐标)
