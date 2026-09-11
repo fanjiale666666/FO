@@ -243,6 +243,13 @@ public class ElytraCollector extends Module {
         .build()
     );
 
+    private final Setting<Boolean> autoTakeBox = sgStorage.add(new BoolSetting.Builder()
+        .name("自动拿空盒")
+        .description("当需要放置鞘翅到潜影盒但背包没有空盒子时，自动从末影箱获取.")
+        .defaultValue(true)
+        .build()
+    );
+
     private final Setting<Boolean> lowYExit = sgStorage.add(new BoolSetting.Builder()
         .name("低Y退出")
         .description("Y 低于阈值时自动退出游戏 (防虚空掉物).")
@@ -1590,8 +1597,8 @@ supplyScanStart = 0;
         }
         if (!dumpNeeded && !resupplyNeeded) {
             // 存完鞘翅且无补货需求：确保背包常备一个可用潜影盒 (用户要求"末影箱的空盒再拿一个出来")，
-            // 下一船捡到鞘翅时可直接放盒，不用再开末影箱
-            if (findBackpackBoxWithSpace() == -1) {
+            // 下一船捡到鞘翅时可直接放盒，不用再开末影箱 (受"自动拿空盒"开关控制)
+            if (autoTakeBox.get() && findBackpackBoxWithSpace() == -1) {
                 int spare = findEcBoxWithSpace(sh, rows);
                 if (spare != -1) {
                     info("存储: 预取一个潜影盒进背包备用.");
