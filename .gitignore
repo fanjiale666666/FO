@@ -1,0 +1,5 @@
+# 系统临时目录
+.tmp-tool-results/
+
+# 参考源码（Ying/LeavesHack 等外部项目源码，211MB，不入库）
+ref-src/
