@@ -50,4 +50,26 @@ class TreeLogicTest {
         assertEquals(TreeLogic.Action.BONEMEAL,
             TreeLogic.decide(true, true, true, true, true));
     }
+
+    @Test
+    void noPlantingWhenBonemealEnabledButMissing() {
+        // 开骨粉但无骨粉：空气位也不种树，整体暂停等待骨粉补充
+        // (防止只种不催熟导致树苗耗尽)
+        assertEquals(TreeLogic.Action.NONE,
+            TreeLogic.decide(false, true, true, false, true));
+    }
+
+    @Test
+    void noPlantingWhenBonemealEnabledButMissingAndSaplingUp() {
+        // 开骨粉但无骨粉：已种树苗也不催熟（无骨粉），且不种新苗
+        assertEquals(TreeLogic.Action.NONE,
+            TreeLogic.decide(true, false, true, false, true));
+    }
+
+    @Test
+    void plantingStillWorksWhenBonemealDisabled() {
+        // 关闭骨粉：照常种树苗
+        assertEquals(TreeLogic.Action.PLANT,
+            TreeLogic.decide(false, true, false, false, true));
+    }
 }

@@ -154,7 +154,8 @@ public class AutoTree extends Module {
             return;
         }
         if (useBoneMeal.get() && !boneMeal.found()) {
-            hint("自动种树: 已开启使用骨粉但快捷栏没有骨粉 (没有骨粉时只种树不催熟).");
+            hint("自动种树: 骨粉已用完，暂停种树等待骨粉补充 (防止树苗只种不催熟而耗尽).");
+            return;
         }
 
         int done = 0;

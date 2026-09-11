@@ -28,6 +28,9 @@ public final class TreeLogic {
      */
     public static Action decide(boolean upIsSapling, boolean upIsAirOrReplaceable,
                                 boolean useBoneMeal, boolean hasBoneMeal, boolean hasSapling) {
+        // 开骨粉但没骨粉：停止一切 (不种也不催熟)，等待骨粉补充
+        // —— 防止"只种不催熟"导致树苗只消耗不长成，树苗逐渐耗尽
+        if (useBoneMeal && !hasBoneMeal) return Action.NONE;
         if (upIsSapling) {
             // 已种下 → 骨粉催熟（若开启且有骨粉）
             if (useBoneMeal && hasBoneMeal) return Action.BONEMEAL;
