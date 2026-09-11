@@ -9,9 +9,21 @@ public final class TrashLogic {
 
     public enum Mode {
         /** 黑名单：列表中的物品丢弃，其余保留 */
-        BLACKLIST,
+        BLACKLIST("黑名单"),
         /** 白名单：仅保留列表中的物品，其余全部丢弃 */
-        WHITELIST
+        WHITELIST("白名单");
+
+        private final String display;
+
+        Mode(String display) {
+            this.display = display;
+        }
+
+        /** 前端 UI/下拉框/持久化均显示中文（Meteor EnumSetting 走 toString） */
+        @Override
+        public String toString() {
+            return display;
+        }
     }
 
     private TrashLogic() {}

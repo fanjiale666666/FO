@@ -3,6 +3,7 @@ package com.fo.addon;
 import com.fo.addon.utils.TrashLogic;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -34,5 +35,12 @@ class TrashLogicTest {
         assertFalse(TrashLogic.shouldDrop(TrashLogic.Mode.BLACKLIST, false, true));
         assertFalse(TrashLogic.shouldDrop(TrashLogic.Mode.WHITELIST, false, false));
         assertFalse(TrashLogic.shouldDrop(TrashLogic.Mode.WHITELIST, false, true));
+    }
+
+    @Test
+    void modeToStringIsChineseForUi() {
+        // 前端汉化：下拉框/UI 走 EnumSetting 的 toString
+        assertEquals("白名单", TrashLogic.Mode.WHITELIST.toString());
+        assertEquals("黑名单", TrashLogic.Mode.BLACKLIST.toString());
     }
 }
