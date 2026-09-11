@@ -338,7 +338,7 @@ public class ElytraCollector extends Module {
 
     // ========== Constructor ==========
     public ElytraCollector() {
-        super(AddonTemplate.CATEGORY, "鞘翅采集",
+        super(AddonTemplate.CATEGORY, "FO 鞘翅采集",
             "全自动找末地城鞘翅：种子定位 + 龙头精确定位 + 高度保持飞行 + 缓降 + Baritone 寻路 + 打展示框捡鞘翅.");
     }
 

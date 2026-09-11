@@ -94,7 +94,7 @@ public class AutoTree extends Module {
     private long lastUseMs = 0;
 
     public AutoTree() {
-        super(AddonTemplate.CATEGORY, "自动种树", "自动种树：左键选择目标方块，手持树苗时自动种植。");
+        super(AddonTemplate.CATEGORY, "FO 自动种树", "自动种树：左键选择目标方块，手持树苗时自动种植。");
     }
 
     @Override

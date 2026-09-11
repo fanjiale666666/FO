@@ -70,7 +70,7 @@ public class AutoTrash extends Module {
     private int tickTimer = 0;
 
     public AutoTrash() {
-        super(AddonTemplate.CATEGORY, "自动扔垃圾", "自动扔垃圾：黑/白名单模式自动丢弃指定物品。");
+        super(AddonTemplate.CATEGORY, "FO 自动扔垃圾", "自动扔垃圾：黑/白名单模式自动丢弃指定物品。");
     }
 
     @Override
