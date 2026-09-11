@@ -45,7 +45,7 @@ public class AutoTree extends Module {
     private final SettingGroup sgRender = settings.createGroup("Render");
 
     private final Setting<Integer> useDelay = sgGeneral.add(new IntSetting.Builder()
-        .name("use-delay")
+        .name("操作延迟")
         .description("每次操作之间的延迟（毫秒）.")
         .defaultValue(50)
         .min(0)
@@ -53,7 +53,7 @@ public class AutoTree extends Module {
         .build());
 
     private final Setting<Integer> blocksPer = sgGeneral.add(new IntSetting.Builder()
-        .name("blocks-per-tick")
+        .name("每tick方块数")
         .description("每 tick 最多操作的方块数量.")
         .defaultValue(1)
         .min(1)
@@ -61,31 +61,31 @@ public class AutoTree extends Module {
         .build());
 
     private final Setting<Boolean> useBoneMeal = sgGeneral.add(new BoolSetting.Builder()
-        .name("use-bone-meal")
+        .name("使用骨粉")
         .description("对已种下的树苗自动使用骨粉催熟.")
         .defaultValue(true)
         .build());
 
     private final Setting<Boolean> render = sgRender.add(new BoolSetting.Builder()
-        .name("render")
+        .name("渲染")
         .description("渲染已登记的种植位.")
         .defaultValue(true)
         .build());
 
     private final Setting<ShapeMode> shapeMode = sgRender.add(new EnumSetting.Builder<ShapeMode>()
-        .name("shape-mode")
+        .name("渲染模式")
         .description("渲染模式.")
         .defaultValue(ShapeMode.Both)
         .build());
 
     private final Setting<SettingColor> lineColor = sgRender.add(new ColorSetting.Builder()
-        .name("line-color")
+        .name("外框颜色")
         .description("外框颜色.")
         .defaultValue(new SettingColor(255, 255, 255, 255))
         .build());
 
     private final Setting<SettingColor> sideColor = sgRender.add(new ColorSetting.Builder()
-        .name("side-color")
+        .name("填充颜色")
         .description("填充颜色.")
         .defaultValue(new SettingColor(255, 255, 255, 50))
         .build());
@@ -94,7 +94,7 @@ public class AutoTree extends Module {
     private long lastUseMs = 0;
 
     public AutoTree() {
-        super(AddonTemplate.CATEGORY, "auto-tree", "自动种树：左键选择目标方块，手持树苗时自动种植。");
+        super(AddonTemplate.CATEGORY, "自动种树", "自动种树：左键选择目标方块，手持树苗时自动种植。");
     }
 
     @Override

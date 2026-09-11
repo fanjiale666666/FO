@@ -95,17 +95,17 @@ public class ElytraCollector extends Module {
 
     // ========== Settings ==========
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
-    private final SettingGroup sgFlight = settings.createGroup("Flight");
+    private final SettingGroup sgFlight = settings.createGroup("飞行");
 
     private final Setting<String> seedSetting = sgGeneral.add(new StringSetting.Builder()
-        .name("seed")
+        .name("世界种子")
         .description("世界种子 (0 = 当前世界).")
         .defaultValue("0")
         .build()
     );
 
     private final Setting<Integer> searchRange = sgGeneral.add(new IntSetting.Builder()
-        .name("search-range")
+        .name("搜索半径")
         .description("搜索半径，单位方块 (从玩家位置).")
         .defaultValue(5000)
         .range(320, 100000)
@@ -114,7 +114,7 @@ public class ElytraCollector extends Module {
     );
 
     private final Setting<Integer> minHeight = sgFlight.add(new IntSetting.Builder()
-        .name("min-height")
+        .name("最低高度")
         .description("飞行中低于此高度时触发爬升.")
         .defaultValue(180)
         .range(100, 300)
@@ -123,7 +123,7 @@ public class ElytraCollector extends Module {
     );
 
     private final Setting<Integer> maxHeight = sgFlight.add(new IntSetting.Builder()
-        .name("max-height")
+        .name("最高高度")
         .description("飞行中高于此高度时停止爬升、转为平缓下滑 (与 min-height 组成滞回区间).")
         .defaultValue(220)
         .range(120, 320)
@@ -132,7 +132,7 @@ public class ElytraCollector extends Module {
     );
 
     private final Setting<Integer> riseHeight = sgFlight.add(new IntSetting.Builder()
-        .name("rise-height")
+        .name("爬升高度")
         .description("起飞后抬头爬升到的目标高度 (需高于 max-height).")
         .defaultValue(230)
         .range(200, 320)
@@ -141,7 +141,7 @@ public class ElytraCollector extends Module {
     );
 
     private final Setting<Double> pitchSpeed = sgFlight.add(new DoubleSetting.Builder()
-        .name("pitch-speed")
+        .name("俯仰速度")
         .description("飞行 (pitch40) 时上下转动视角 (pitch) 的速度 (度/tick).")
         .defaultValue(10.0)
         .min(1)
@@ -150,7 +150,7 @@ public class ElytraCollector extends Module {
     );
 
     private final Setting<Double> yawSpeed = sgFlight.add(new DoubleSetting.Builder()
-        .name("yaw-speed")
+        .name("偏航速度")
         .description("左右转动视角 (yaw) 及鞘翅缓降的转向速度 (度/tick).")
         .defaultValue(30.0)
         .min(1)
@@ -159,7 +159,7 @@ public class ElytraCollector extends Module {
     );
 
     private final Setting<Double> killAuraReach = sgFlight.add(new DoubleSetting.Builder()
-        .name("kill-aura-reach")
+        .name("交互判定距离")
         .description("攻击展示框 (item_frame) 的判定距离.")
         .defaultValue(3.0)
         .min(1)
@@ -168,7 +168,7 @@ public class ElytraCollector extends Module {
     );
 
     private final Setting<Double> fireworkInterval = sgFlight.add(new DoubleSetting.Builder()
-        .name("firework-interval")
+        .name("烟花间隔")
         .description("展开鞘翅后立即使用第一个烟花，之后每隔这么多秒再用一个 (秒).")
         .defaultValue(2.0)
         .min(0.5)
@@ -177,7 +177,7 @@ public class ElytraCollector extends Module {
     );
 
     private final Setting<List<String>> blacklist = sgGeneral.add(new StringListSetting.Builder()
-        .name("blacklist")
+        .name("黑名单")
         .description("黑名单：已经去过的船 (x,z)，搜索时会自动跳过. 自动维护.")
         .defaultValue(new ArrayList<>())
         .visible(() -> false) // 黑名单不输出到 UI，只静默记日志
@@ -185,14 +185,14 @@ public class ElytraCollector extends Module {
     );
 
     private final Setting<List<String>> searchResults = sgGeneral.add(new StringListSetting.Builder()
-        .name("search-results")
+        .name("搜索结果")
         .description("上次搜索结果列表 (x,y,z,朝向)，下一次搜索完成后覆盖.")
         .defaultValue(new ArrayList<>())
         .build()
     );
 
     private final Setting<Boolean> btnStart = sgGeneral.add(new BoolSetting.Builder()
-        .name("start")
+        .name("开始采集")
         .description("开始自动采集.")
         .defaultValue(false)
         .onChanged(b -> { if (b) start(); })
@@ -200,17 +200,17 @@ public class ElytraCollector extends Module {
     );
 
     private final Setting<Boolean> debugSetting = sgGeneral.add(new BoolSetting.Builder()
-        .name("debug")
+        .name("调试日志")
         .description("输出调试日志 (用于校准高度公式).")
         .defaultValue(false)
         .build()
     );
 
     // ========== Storage Settings ==========
-    private final SettingGroup sgStorage = settings.createGroup("Storage");
+    private final SettingGroup sgStorage = settings.createGroup("存储");
 
     private final Setting<Integer> freeSlotDump = sgStorage.add(new IntSetting.Builder()
-        .name("dump-free-slots")
+        .name("背包空格阈值")
         .description("背包可用空格 ≤ 此值时，拿到鞘翅后自动去末影箱存鞘翅.")
         .defaultValue(3)
         .range(0, 36)
@@ -219,21 +219,21 @@ public class ElytraCollector extends Module {
     );
 
     private final Setting<List<String>> supplies = sgStorage.add(new StringListSetting.Builder()
-        .name("supplies")
+        .name("物资列表")
         .description("物资列表，格式: 物品ID;最低值;目标库存 (如 minecraft:firework_rocket;32;256). 背包物资低于最低值时自动从末影箱补货，拿到目标库存为止.")
         .defaultValue(new ArrayList<>(List.of("minecraft:firework_rocket;4;16", "minecraft:cooked_beef;8;32")))
         .build()
     );
 
     private final Setting<Boolean> lowYExit = sgStorage.add(new BoolSetting.Builder()
-        .name("low-y-exit")
+        .name("低Y退出")
         .description("Y 低于阈值时自动退出游戏 (防虚空掉物).")
         .defaultValue(true)
         .build()
     );
 
     private final Setting<Integer> lowYThreshold = sgStorage.add(new IntSetting.Builder()
-        .name("low-y-threshold")
+        .name("低Y阈值")
         .description("低于此 Y 自动退出游戏.")
         .defaultValue(-20)
         .range(-64, 100)
@@ -338,7 +338,7 @@ public class ElytraCollector extends Module {
 
     // ========== Constructor ==========
     public ElytraCollector() {
-        super(AddonTemplate.CATEGORY, "elytra-collector",
+        super(AddonTemplate.CATEGORY, "鞘翅采集",
             "全自动找末地城鞘翅：种子定位 + 龙头精确定位 + 高度保持飞行 + 缓降 + Baritone 寻路 + 打展示框捡鞘翅.");
     }
 

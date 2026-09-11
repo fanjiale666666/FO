@@ -29,19 +29,19 @@ public class AutoTrash extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
 
     private final Setting<TrashLogic.Mode> mode = sgGeneral.add(new EnumSetting.Builder<TrashLogic.Mode>()
-        .name("mode")
+        .name("名单模式")
         .description("名单模式：黑名单=只丢列表中的物品；白名单=只保留列表中的物品，其余全丢.")
         .defaultValue(TrashLogic.Mode.BLACKLIST)
         .build());
 
     private final Setting<List<Item>> items = sgGeneral.add(new ItemListSetting.Builder()
-        .name("items")
+        .name("物品列表")
         .description("物品列表.")
         .defaultValue(List.of())
         .build());
 
     private final Setting<Integer> delay = sgGeneral.add(new IntSetting.Builder()
-        .name("delay")
+        .name("丢弃延迟")
         .description("每次丢弃之间的间隔（游戏刻）.")
         .defaultValue(2)
         .min(1)
@@ -50,19 +50,19 @@ public class AutoTrash extends Module {
         .build());
 
     private final Setting<Boolean> dropAll = sgGeneral.add(new BoolSetting.Builder()
-        .name("drop-all")
+        .name("丢弃整组")
         .description("丢弃整组物品；关闭时每次只丢一个.")
         .defaultValue(true)
         .build());
 
     private final Setting<Boolean> excludeHotbar = sgGeneral.add(new BoolSetting.Builder()
-        .name("exclude-hotbar")
+        .name("排除快捷栏")
         .description("不处理快捷栏中的物品（推荐开启，保护常用物品）.")
         .defaultValue(true)
         .build());
 
     private final Setting<Boolean> toggleOffOnClear = sgGeneral.add(new BoolSetting.Builder()
-        .name("toggle-off-on-clear")
+        .name("清空后自动关闭")
         .description("背包中无可丢弃物品后自动关闭模块.")
         .defaultValue(false)
         .build());
@@ -70,7 +70,7 @@ public class AutoTrash extends Module {
     private int tickTimer = 0;
 
     public AutoTrash() {
-        super(AddonTemplate.CATEGORY, "auto-trash", "自动扔垃圾：黑/白名单模式自动丢弃指定物品。");
+        super(AddonTemplate.CATEGORY, "自动扔垃圾", "自动扔垃圾：黑/白名单模式自动丢弃指定物品。");
     }
 
     @Override
