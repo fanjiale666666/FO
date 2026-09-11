@@ -2,7 +2,6 @@ package com.fo.addon;
 
 import com.fo.addon.modules.AutoTrash;
 import com.fo.addon.modules.AutoTree;
-import com.fo.addon.modules.AutoUse;
 import com.fo.addon.modules.ElytraCollector;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.GithubRepo;
@@ -23,7 +22,6 @@ public class AddonTemplate extends MeteorAddon {
         Modules.get().add(new ElytraCollector());
         Modules.get().add(new AutoTree());
         Modules.get().add(new AutoTrash());
-        Modules.get().add(new AutoUse());
     }
 
     @Override
