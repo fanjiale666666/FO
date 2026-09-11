@@ -191,13 +191,31 @@ public class ElytraCollector extends Module {
         .build()
     );
 
+    // 防止 stopTask 内部置按钮时递归触发 onChanged (必须定义在 btnStart 之前)
+    private boolean btnSelfSet = false;
+
     private final Setting<Boolean> btnStart = sgGeneral.add(new BoolSetting.Builder()
         .name("开始采集")
         .description("开始自动采集.")
         .defaultValue(false)
-        .onChanged(b -> { if (b) start(); })
+        .onChanged(b -> {
+            if (btnSelfSet) return;
+            if (b) {
+                start();
+            } else {
+                // 关闭按钮 = 立即停止任务 (修复: 之前只处理开启分支, 关闭后状态机仍在运行)
+                stopTask("手动停止.");
+            }
+        })
         .build()
     );
+
+    /** 内部置按钮为 false 时使用，防止 onChanged 递归 */
+    private void btnOff() {
+        btnSelfSet = true;
+        btnStart.set(false);
+        btnSelfSet = false;
+    }
 
     private final Setting<Boolean> debugSetting = sgGeneral.add(new BoolSetting.Builder()
         .name("调试日志")
@@ -220,8 +238,8 @@ public class ElytraCollector extends Module {
 
     private final Setting<List<String>> supplies = sgStorage.add(new StringListSetting.Builder()
         .name("物资列表")
-        .description("物资列表，格式: 物品ID;最低值;目标库存 (如 minecraft:firework_rocket;32;256). 背包物资低于最低值时自动从末影箱补货，拿到目标库存为止.")
-        .defaultValue(new ArrayList<>(List.of("minecraft:firework_rocket;4;16", "minecraft:cooked_beef;8;32")))
+        .description("物资列表，格式: 物品ID;最低值;目标库存 (如 minecraft:firework_rocket;32;256). 背包物资低于最低值时自动从末影箱补货，拿到目标库存为止. 留空 = 不补货.")
+        .defaultValue(new ArrayList<>())
         .build()
     );
 
@@ -357,6 +375,14 @@ public class ElytraCollector extends Module {
     }
 
     @Override
+    public void onActivate() {
+        // 按钮保存值为 true 时，激活模块即自动开始 (用户无需再手动点一次按钮)
+        if (btnStart.get() && state == State.IDLE && mc.player != null && mc.world != null) {
+            start();
+        }
+    }
+
+    @Override
     public void onDeactivate() {
         searchCancelled = true;
         searchGeneration++;
@@ -402,8 +428,13 @@ public class ElytraCollector extends Module {
 
     // ========== Start ==========
     private void start() {
+        if (mc.player == null || mc.world == null) {
+            // 配置加载时可能误触发 (按钮保存值为 true)，此时游戏未进存档，直接忽略
+            btnOff();
+            return;
+        }
         if (state != State.IDLE && state != State.DONE) {
-            btnStart.set(false);
+            btnOff();
             return;
         }
         state = State.SEARCHING;
@@ -416,6 +447,9 @@ public class ElytraCollector extends Module {
         storageTick = 0;
         boxInventorySlot = -1;
         info("开始搜索末地城 (范围=" + searchRange.get() + " 方块)...");
+        if (parseSupplies().isEmpty()) {
+            info("物资列表为空，自动补货已跳过 (如需补货请在存储分组中配置).");
+        }
         if (debugSetting.get()) {
             info("调试日志文件: " + debugFilePath().toAbsolutePath());
         }
@@ -528,7 +562,7 @@ public class ElytraCollector extends Module {
             if (!searchCancelled && generation == searchGeneration) {
                 error("搜索失败: " + e.getMessage());
                 state = State.IDLE;
-                btnStart.set(false);
+                btnOff();
             }
         }
     }
@@ -634,7 +668,7 @@ public class ElytraCollector extends Module {
         if (!landingRecover && stateTick > 400) {
             error("起飞超时 (可能没穿鞘翅或没有烟花).");
             state = State.IDLE;
-            btnStart.set(false);
+            btnOff();
             releaseForward();
             return;
         }
@@ -1114,7 +1148,7 @@ public class ElytraCollector extends Module {
         resetStorageClick();
         if (state != State.IDLE) state = State.IDLE;
         PathManagers.get().stop();
-        btnStart.set(false);
+        btnOff();
     }
 
     private void completeTask(String reason) {
@@ -1135,6 +1169,18 @@ public class ElytraCollector extends Module {
         resupplyNeeded = anyDeficit();
         if (dumpNeeded || resupplyNeeded) {
             info("存储会话: 存鞘翅=" + dumpNeeded + ", 补货=" + resupplyNeeded);
+            if (resupplyNeeded) {
+                // 明确提示缺哪些物资 (修复: 之前只报 true/false, 用户不知道缺什么)
+                StringBuilder sb = new StringBuilder("缺少物资: ");
+                for (SupplyRule r : parseSupplies()) {
+                    int have = countItem(r.item);
+                    if (have < r.min) {
+                        sb.append(r.item.getName().getString())
+                            .append("(").append(have).append("/").append(r.min).append(") ");
+                    }
+                }
+                info(sb.toString().trim());
+            }
             storagePhase = StoragePhase.PLACE_EC;
             storageTick = 0;
             ecPos = null;
@@ -1248,7 +1294,17 @@ supplyScanStart = 0;
             }
             int ecSlot = findItemSlot(Items.ENDER_CHEST);
             if (ecSlot == -1) {
-                stopTask("背包里没有末影箱，停止任务.");
+                if (dumpNeeded) {
+                    // 存鞘翅是刚需 (背包快满)，没末影箱只能停
+                    stopTask("背包里没有末影箱，无法存鞘翅，停止任务. 请先准备末影箱.");
+                } else {
+                    // 只是补货 → 跳过存储会话，继续主任务 (修复: 之前直接停任务导致"一直不启动")
+                    info("背包里没有末影箱，跳过补货，继续任务.");
+                    storagePhase = StoragePhase.NONE;
+                    storageTick = 0;
+                    dumpNeeded = false;
+                    resupplyNeeded = false;
+                }
                 return;
             }
             ecBaseline = countItem(Items.ENDER_CHEST);
