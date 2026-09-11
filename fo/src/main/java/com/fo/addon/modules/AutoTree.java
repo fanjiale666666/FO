@@ -92,6 +92,7 @@ public class AutoTree extends Module {
 
     private final List<BlockPos> treePos = new ArrayList<>();
     private long lastUseMs = 0;
+    private long lastHintMs = 0;
 
     public AutoTree() {
         super(AddonTemplate.CATEGORY, "FO 自动种树", "自动种树：左键选择目标方块，手持树苗时自动种植。");
@@ -101,6 +102,7 @@ public class AutoTree extends Module {
     public void onActivate() {
         treePos.clear();
         lastUseMs = System.currentTimeMillis() - 999_999L; // 立即可用
+        lastHintMs = 0;
     }
 
     @Override
@@ -112,21 +114,48 @@ public class AutoTree extends Module {
     private void onStartBreakingBlock(StartBreakingBlockEvent event) {
         if (!BlockUtils.canBreak(event.blockPos)) return;
         event.cancel();
-        if (!treePos.contains(event.blockPos)) treePos.add(event.blockPos);
-        else treePos.remove(event.blockPos);
+        if (!treePos.contains(event.blockPos)) {
+            treePos.add(event.blockPos);
+            info("已登记种植位 (" + event.blockPos.getX() + ", " + event.blockPos.getY() + ", " + event.blockPos.getZ() + ")，手持树苗后自动种植；再点一次取消.");
+        } else {
+            treePos.remove(event.blockPos);
+            info("已取消种植位.");
+        }
+    }
+
+    /** 低频提示（每 5 秒最多一条），避免刷屏 */
+    private void hint(String msg) {
+        long now = System.currentTimeMillis();
+        if (now - lastHintMs < 5000) return;
+        lastHintMs = now;
+        info(msg);
     }
 
     @EventHandler
     private void onTick(TickEvent.Pre event) {
-        if (treePos.isEmpty()) return;
+        // 操作引导：缺哪一步直接提示 (原版无提示, 用户以为坏了)
+        if (treePos.isEmpty()) {
+            hint("自动种树: 请先用左键点击一个地面方块登记种植位 (再点一下取消).");
+            return;
+        }
         if (System.currentTimeMillis() - lastUseMs < useDelay.get()) return;
 
         // 仅手持树苗时工作
         ItemStack held = mc.player.getInventory().getStack(mc.player.getInventory().getSelectedSlot());
-        if (!isSaplingItem(held)) return;
+        if (!isSaplingItem(held)) {
+            hint("自动种树: 请手持树苗 (橡树/云杉/桦树/丛林/金合欢/深色橡树/樱花树苗).");
+            return;
+        }
 
         FindItemResult sapling = InvUtils.findInHotbar(AutoTree::isSaplingItem);
         FindItemResult boneMeal = InvUtils.findInHotbar(Items.BONE_MEAL);
+        if (!sapling.found()) {
+            hint("自动种树: 快捷栏没有树苗，请把树苗放进快捷栏.");
+            return;
+        }
+        if (useBoneMeal.get() && !boneMeal.found()) {
+            hint("自动种树: 已开启使用骨粉但快捷栏没有骨粉 (没有骨粉时只种树不催熟).");
+        }
 
         int done = 0;
         for (BlockPos pos : treePos) {
