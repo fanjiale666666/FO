@@ -14,6 +14,7 @@ import meteordevelopment.meteorclient.utils.player.SlotUtils;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.screen.slot.SlotActionType;
 
 import java.util.List;
@@ -31,13 +32,40 @@ public class AutoTrash extends Module {
     private final Setting<TrashLogic.Mode> mode = sgGeneral.add(new EnumSetting.Builder<TrashLogic.Mode>()
         .name("名单模式")
         .description("名单模式：黑名单=只丢列表中的物品；白名单=只保留列表中的物品，其余全丢.")
-        .defaultValue(TrashLogic.Mode.BLACKLIST)
+        .defaultValue(TrashLogic.Mode.WHITELIST)
         .build());
 
     private final Setting<List<Item>> items = sgGeneral.add(new ItemListSetting.Builder()
         .name("物品列表")
         .description("物品列表.")
-        .defaultValue(List.of())
+        .defaultValue(List.of(
+            Items.ENDER_PEARL,        // 末影珍珠
+            Items.DIAMOND_BLOCK,      // 钻石块
+            Items.DIAMOND,            // 钻石
+            Items.NETHERITE_INGOT,    // 下界合金锭
+            Items.ANCIENT_DEBRIS,     // 远古残骸
+            Items.TRIDENT,            // 三叉戟
+            Items.GOLDEN_CARROT,      // 金胡萝卜
+            Items.MACE,               // 重锤
+            Items.COBWEB,             // 蜘蛛网
+            Items.SHULKER_BOX,        // 潜影盒
+            Items.WHITE_SHULKER_BOX,
+            Items.ORANGE_SHULKER_BOX,
+            Items.MAGENTA_SHULKER_BOX,
+            Items.LIGHT_BLUE_SHULKER_BOX,
+            Items.YELLOW_SHULKER_BOX,
+            Items.LIME_SHULKER_BOX,
+            Items.PINK_SHULKER_BOX,
+            Items.GRAY_SHULKER_BOX,
+            Items.LIGHT_GRAY_SHULKER_BOX,
+            Items.CYAN_SHULKER_BOX,
+            Items.PURPLE_SHULKER_BOX,
+            Items.BLUE_SHULKER_BOX,
+            Items.BROWN_SHULKER_BOX,
+            Items.GREEN_SHULKER_BOX,
+            Items.RED_SHULKER_BOX,
+            Items.BLACK_SHULKER_BOX
+        ))
         .build());
 
     private final Setting<Integer> delay = sgGeneral.add(new IntSetting.Builder()
