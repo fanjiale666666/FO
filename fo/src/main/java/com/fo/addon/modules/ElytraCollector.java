@@ -239,7 +239,7 @@ public class ElytraCollector extends Module {
     private final Setting<List<String>> supplies = sgStorage.add(new StringListSetting.Builder()
         .name("物资列表")
         .description("物资列表，格式: 物品ID;最低值;目标库存 (如 minecraft:firework_rocket;32;256). 背包物资低于最低值时自动从末影箱补货，拿到目标库存为止. 留空 = 不补货.")
-        .defaultValue(new ArrayList<>())
+        .defaultValue(new ArrayList<>(List.of("minecraft:firework_rocket;4;16", "minecraft:golden_carrot;8;32")))
         .build()
     );
 
