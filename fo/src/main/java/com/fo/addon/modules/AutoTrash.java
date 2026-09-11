@@ -76,6 +76,8 @@ public class AutoTrash extends Module {
     @Override
     public void onActivate() {
         tickTimer = 0;
+        // 启动时打印当前模式与列表数量，方便确认设置是否生效
+        info("已启动 (模式: " + mode.get() + ", 列表物品数: " + items.get().size() + ").");
     }
 
     @EventHandler
@@ -85,10 +87,11 @@ public class AutoTrash extends Module {
         List<Item> list = items.get();
         boolean listConfigured = !list.isEmpty();
         if (!listConfigured) {
-            // 保护：列表为空时不丢任何物品（尤其白名单模式，防止清空背包）
+            // 保护：列表为空时不丢任何物品（尤其白名单模式，防止清空背包）。
+            // 注意：不强制关闭模块——之前 toggle() 自动关会让用户误以为"设置被重置成黑名单"，
+            // 且模块开不起来。改为仅提示一次。
             if (mode.get() == TrashLogic.Mode.WHITELIST) {
-                error("白名单列表为空，已暂停（防止误丢）.");
-                toggle();
+                info("白名单模式但物品列表为空，未丢弃任何物品 (请在物品列表中添加要保留的物品).");
             }
             return;
         }
