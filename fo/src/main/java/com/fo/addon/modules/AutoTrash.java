@@ -39,6 +39,43 @@ public class AutoTrash extends Module {
         .name("物品列表")
         .description("物品列表.")
         .defaultValue(List.of(
+            // 第一张截图 (35 项)
+            Items.END_CRYSTAL,           // 末地水晶
+            Items.ENDER_CHEST,           // 末影箱
+            Items.TOTEM_OF_UNDYING,      // 不死图腾
+            Items.FIREWORK_ROCKET,       // 烟花火箭
+            Items.EXPERIENCE_BOTTLE,     // 附魔之瓶
+            Items.SPLASH_POTION,         // 喷溅药水
+            Items.GLOWSTONE,             // 荧石
+            Items.OBSIDIAN,              // 黑曜石
+            Items.CRAFTING_TABLE,        // 工作台
+            Items.QUARTZ,                // 下界石英
+            Items.RESPAWN_ANCHOR,        // 重生锚
+            Items.NETHERITE_SWORD,       // 下界合金剑
+            Items.NETHERITE_PICKAXE,     // 下界合金镐
+            Items.NETHERITE_SHOVEL,      // 下界合金锹
+            Items.NETHERITE_AXE,         // 下界合金斧
+            Items.NETHERITE_HOE,         // 下界合金锄
+            Items.NETHERITE_HELMET,      // 下界合金头盔
+            Items.NETHERITE_CHESTPLATE,  // 下界合金胸甲
+            Items.NETHERITE_LEGGINGS,    // 下界合金护腿
+            Items.NETHERITE_BOOTS,       // 下界合金靴子
+            Items.DIAMOND_SWORD,         // 钻石剑
+            Items.DIAMOND_PICKAXE,       // 钻石镐
+            Items.DIAMOND_SHOVEL,        // 钻石锹
+            Items.DIAMOND_AXE,           // 钻石斧
+            Items.DIAMOND_HOE,           // 钻石锄
+            Items.DIAMOND_HELMET,        // 钻石头盔
+            Items.DIAMOND_CHESTPLATE,    // 钻石胸甲
+            Items.DIAMOND_LEGGINGS,      // 钻石护腿
+            Items.DIAMOND_BOOTS,         // 钻石靴子
+            Items.PISTON,                // 活塞
+            Items.STICKY_PISTON,         // 黏性活塞
+            Items.GOLDEN_APPLE,          // 金苹果
+            Items.ENCHANTED_GOLDEN_APPLE,// 附魔金苹果
+            Items.ELYTRA,                // 鞘翅
+            Items.REDSTONE_BLOCK,        // 红石块
+            // 第二张截图 (26 项)
             Items.ENDER_PEARL,        // 末影珍珠
             Items.DIAMOND_BLOCK,      // 钻石块
             Items.DIAMOND,            // 钻石
