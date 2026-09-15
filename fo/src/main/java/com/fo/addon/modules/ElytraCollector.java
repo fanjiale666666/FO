@@ -697,11 +697,12 @@ public class ElytraCollector extends Module {
             if (mc.player == null || mc.world == null) return;
             stateTick++;
 
-            // 低高度安全网：只有任务运行中才生效 (防虚空掉物)；只停止任务，绝不关闭游戏
+            // 低高度安全网：只有任务运行中才生效 (防虚空掉物)；低于阈值自动退出游戏 (断开服务器)
             if (state != State.IDLE && state != State.DONE
                 && lowYExit.get() && mc.player.getY() < lowYThreshold.get()) {
-                warning("Y=" + String.format("%.1f", mc.player.getY()) + " 低于阈值 " + lowYThreshold.get() + "，任务已停止.");
-                stopTask("低高度任务停止.");
+                warning("Y=" + String.format("%.1f", mc.player.getY()) + " 低于阈值 " + lowYThreshold.get() + "，自动退出游戏.");
+                disconnect("FO 鞘翅采集: Y 低于阈值 " + lowYThreshold.get() + "，自动退出游戏保护");
+                stopTask("低高度自动退出游戏.");
                 return;
             }
 
