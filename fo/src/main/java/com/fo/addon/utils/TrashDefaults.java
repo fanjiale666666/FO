@@ -95,4 +95,12 @@ public final class TrashDefaults {
         }
         return out;
     }
+
+    /**
+     * 联动时决定是否填默认列表：仅当用户列表为空/未配置时才填 61 项默认，
+     * 用户已手动配置过的列表一律沿用（尊重用户改动）。
+     */
+    public static boolean shouldFillDefault(List<?> current) {
+        return current == null || current.isEmpty();
+    }
 }

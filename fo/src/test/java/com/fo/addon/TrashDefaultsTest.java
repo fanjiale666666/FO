@@ -3,9 +3,11 @@ package com.fo.addon;
 import com.fo.addon.utils.TrashDefaults;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TrashDefaultsTest {
@@ -41,5 +43,18 @@ class TrashDefaultsTest {
         assertTrue(ids.contains("minecraft:white_shulker_box"));
         assertTrue(ids.contains("minecraft:black_shulker_box"));
         assertTrue(ids.contains("minecraft:red_shulker_box"));
+    }
+
+    @Test
+    void emptyOrNullListFillsDefault() {
+        // 联动时：列表为空/未配置 → 填默认 61 项
+        assertTrue(TrashDefaults.shouldFillDefault(null));
+        assertTrue(TrashDefaults.shouldFillDefault(List.of()));
+    }
+
+    @Test
+    void userConfiguredListIsRespected() {
+        // 联动时：用户已手动配置非空列表 → 沿用用户列表，不覆盖
+        assertFalse(TrashDefaults.shouldFillDefault(List.of("minecraft:diamond")));
     }
 }

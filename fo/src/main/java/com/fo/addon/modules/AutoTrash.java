@@ -74,10 +74,12 @@ public class AutoTrash extends Module {
         super(AddonTemplate.CATEGORY, "FO 自动扔垃圾", "自动扔垃圾：黑/白名单模式自动丢弃指定物品。");
     }
 
-    /** 供 ElytraCollector 联动调用：强制白名单模式 + 61 项默认列表，未开启则开启 */
+    /** 供 ElytraCollector 联动调用：强制白名单模式；列表非空则沿用用户配置，空才填默认 61 项 */
     public void enableForElytraLink() {
         mode.set(TrashLogic.Mode.WHITELIST);
-        items.set(TrashDefaults.toItems());
+        if (TrashDefaults.shouldFillDefault(items.get())) {
+            items.set(TrashDefaults.toItems());
+        }
         if (!isActive()) toggle();
     }
 
