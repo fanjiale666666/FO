@@ -1,6 +1,9 @@
 package com.fo.addon.modules;
 
 import com.fo.addon.AddonTemplate;
+import com.fo.addon.utils.Debug;
+import com.fo.addon.utils.DirectionFilter;
+import com.fo.addon.utils.TrashDefaults;
 import com.seedfinding.mcbiome.source.EndBiomeSource;
 import com.seedfinding.mccore.rand.ChunkRand;
 import com.seedfinding.mccore.util.block.BlockRotation;
@@ -23,6 +26,7 @@ import meteordevelopment.meteorclient.gui.widgets.containers.WSection;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WButton;
 import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.modules.Module;
+import meteordevelopment.meteorclient.systems.modules.Modules;
 import meteordevelopment.meteorclient.utils.Utils;
 import meteordevelopment.meteorclient.utils.player.FindItemResult;
 import meteordevelopment.meteorclient.utils.player.InvUtils;
@@ -334,6 +338,7 @@ public class ElytraCollector extends Module {
     private boolean pickupSessionDone = false; // 每艘船捡到鞘翅后只触发一次船旁存储会话 (防缺口未补齐时原地无限重启)
     private boolean firstFireworkDone = false;
     private int lastFireworkTick = 0;
+    private boolean linkedTrash = false;     // 本次激活是否由我们联动开启了自动扔垃圾 (关闭时智能回滚)
 
     // ========== 降落恢复爬升 ==========
     private boolean landingRecover = false;
@@ -415,6 +420,14 @@ public class ElytraCollector extends Module {
 
     @Override
     public void onActivate() {
+        // 联动：自动打开「FO 自动扔垃圾」(白名单 + 61 项默认列表)，并标记本次联动开启
+        AutoTrash trash = Modules.get().get(AutoTrash.class);
+        if (trash != null && !trash.isActive()) {
+            trash.enableForElytraLink();
+            linkedTrash = true;
+            info("已联动开启 FO 自动扔垃圾 (白名单 " + TrashDefaults.DEFAULT_WHITELIST_IDS.size() + " 项).");
+        }
+
         // 按钮保存值为 true 时，激活模块即自动开始 (用户无需再手动点一次按钮)
         if (btnStart.get() && state == State.IDLE && mc.player != null && mc.world != null) {
             start();
@@ -423,6 +436,12 @@ public class ElytraCollector extends Module {
 
     @Override
     public void onDeactivate() {
+        // 联动回滚：仅关闭由本次联动开启的自动扔垃圾（手动开的不会被关）
+        if (linkedTrash) {
+            AutoTrash trash = Modules.get().get(AutoTrash.class);
+            if (trash != null) trash.disableForElytraLink();
+            linkedTrash = false;
+        }
         searchCancelled = true;
         searchGeneration++;
         searchThread = null;

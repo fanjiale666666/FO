@@ -1,6 +1,7 @@
 package com.fo.addon.modules;
 
 import com.fo.addon.AddonTemplate;
+import com.fo.addon.utils.TrashDefaults;
 import com.fo.addon.utils.TrashLogic;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.settings.BoolSetting;
@@ -14,7 +15,6 @@ import meteordevelopment.meteorclient.utils.player.SlotUtils;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.screen.slot.SlotActionType;
 
 import java.util.List;
@@ -38,71 +38,7 @@ public class AutoTrash extends Module {
     private final Setting<List<Item>> items = sgGeneral.add(new ItemListSetting.Builder()
         .name("物品列表")
         .description("物品列表.")
-        .defaultValue(List.of(
-            // 第一张截图 (35 项)
-            Items.END_CRYSTAL,           // 末地水晶
-            Items.ENDER_CHEST,           // 末影箱
-            Items.TOTEM_OF_UNDYING,      // 不死图腾
-            Items.FIREWORK_ROCKET,       // 烟花火箭
-            Items.EXPERIENCE_BOTTLE,     // 附魔之瓶
-            Items.SPLASH_POTION,         // 喷溅药水
-            Items.GLOWSTONE,             // 荧石
-            Items.OBSIDIAN,              // 黑曜石
-            Items.CRAFTING_TABLE,        // 工作台
-            Items.QUARTZ,                // 下界石英
-            Items.RESPAWN_ANCHOR,        // 重生锚
-            Items.NETHERITE_SWORD,       // 下界合金剑
-            Items.NETHERITE_PICKAXE,     // 下界合金镐
-            Items.NETHERITE_SHOVEL,      // 下界合金锹
-            Items.NETHERITE_AXE,         // 下界合金斧
-            Items.NETHERITE_HOE,         // 下界合金锄
-            Items.NETHERITE_HELMET,      // 下界合金头盔
-            Items.NETHERITE_CHESTPLATE,  // 下界合金胸甲
-            Items.NETHERITE_LEGGINGS,    // 下界合金护腿
-            Items.NETHERITE_BOOTS,       // 下界合金靴子
-            Items.DIAMOND_SWORD,         // 钻石剑
-            Items.DIAMOND_PICKAXE,       // 钻石镐
-            Items.DIAMOND_SHOVEL,        // 钻石锹
-            Items.DIAMOND_AXE,           // 钻石斧
-            Items.DIAMOND_HOE,           // 钻石锄
-            Items.DIAMOND_HELMET,        // 钻石头盔
-            Items.DIAMOND_CHESTPLATE,    // 钻石胸甲
-            Items.DIAMOND_LEGGINGS,      // 钻石护腿
-            Items.DIAMOND_BOOTS,         // 钻石靴子
-            Items.PISTON,                // 活塞
-            Items.STICKY_PISTON,         // 黏性活塞
-            Items.GOLDEN_APPLE,          // 金苹果
-            Items.ENCHANTED_GOLDEN_APPLE,// 附魔金苹果
-            Items.ELYTRA,                // 鞘翅
-            Items.REDSTONE_BLOCK,        // 红石块
-            // 第二张截图 (26 项)
-            Items.ENDER_PEARL,        // 末影珍珠
-            Items.DIAMOND_BLOCK,      // 钻石块
-            Items.DIAMOND,            // 钻石
-            Items.NETHERITE_INGOT,    // 下界合金锭
-            Items.ANCIENT_DEBRIS,     // 远古残骸
-            Items.TRIDENT,            // 三叉戟
-            Items.GOLDEN_CARROT,      // 金胡萝卜
-            Items.MACE,               // 重锤
-            Items.COBWEB,             // 蜘蛛网
-            Items.SHULKER_BOX,        // 潜影盒
-            Items.WHITE_SHULKER_BOX,
-            Items.ORANGE_SHULKER_BOX,
-            Items.MAGENTA_SHULKER_BOX,
-            Items.LIGHT_BLUE_SHULKER_BOX,
-            Items.YELLOW_SHULKER_BOX,
-            Items.LIME_SHULKER_BOX,
-            Items.PINK_SHULKER_BOX,
-            Items.GRAY_SHULKER_BOX,
-            Items.LIGHT_GRAY_SHULKER_BOX,
-            Items.CYAN_SHULKER_BOX,
-            Items.PURPLE_SHULKER_BOX,
-            Items.BLUE_SHULKER_BOX,
-            Items.BROWN_SHULKER_BOX,
-            Items.GREEN_SHULKER_BOX,
-            Items.RED_SHULKER_BOX,
-            Items.BLACK_SHULKER_BOX
-        ))
+        .defaultValue(TrashDefaults.toItems())
         .build());
 
     private final Setting<Integer> delay = sgGeneral.add(new IntSetting.Builder()
@@ -136,6 +72,18 @@ public class AutoTrash extends Module {
 
     public AutoTrash() {
         super(AddonTemplate.CATEGORY, "FO 自动扔垃圾", "自动扔垃圾：黑/白名单模式自动丢弃指定物品。");
+    }
+
+    /** 供 ElytraCollector 联动调用：强制白名单模式 + 61 项默认列表，未开启则开启 */
+    public void enableForElytraLink() {
+        mode.set(TrashLogic.Mode.WHITELIST);
+        items.set(TrashDefaults.toItems());
+        if (!isActive()) toggle();
+    }
+
+    /** 供 ElytraCollector 联动回滚调用：仅关闭模块（不还原模式/列表） */
+    public void disableForElytraLink() {
+        if (isActive()) toggle();
     }
 
     @Override
