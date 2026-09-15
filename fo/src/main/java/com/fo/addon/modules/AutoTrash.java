@@ -12,9 +12,11 @@ import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.player.SlotUtils;
+import meteordevelopment.meteorclient.utils.render.MeteorToast;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.screen.slot.SlotActionType;
 
 import java.util.List;
@@ -74,13 +76,28 @@ public class AutoTrash extends Module {
         super(AddonTemplate.CATEGORY, "FO 自动扔垃圾", "自动扔垃圾：黑/白名单模式自动丢弃指定物品。");
     }
 
-    /** 供 ElytraCollector 联动调用：强制白名单模式；列表非空则沿用用户配置，空才填默认 61 项 */
+    /** 供 ElytraCollector 联动调用：强制白名单模式；列表非空则沿用用户配置，空才填默认 61 项；额外弹一次系统通知 */
     public void enableForElytraLink() {
         mode.set(TrashLogic.Mode.WHITELIST);
-        if (TrashDefaults.shouldFillDefault(items.get())) {
+        boolean filledDefault = TrashDefaults.shouldFillDefault(items.get());
+        if (filledDefault) {
             items.set(TrashDefaults.toItems());
         }
         if (!isActive()) toggle();
+
+        // 额外弹一次系统通知 (Toast)，明确本次联动用的什么列表
+        try {
+            String text = filledDefault
+                ? "物品列表为空，已重置为基础白名单 " + TrashDefaults.DEFAULT_WHITELIST_IDS.size() + " 项"
+                : "沿用你的白名单列表（" + items.get().size() + " 项）";
+            MeteorToast toast = new MeteorToast.Builder("已联动开启 FO 自动扔垃圾")
+                .icon(Items.SHULKER_BOX)
+                .text(text)
+                .build();
+            mc.getToastManager().add(toast);
+        } catch (Exception ignored) {
+            // 通知失败不影响联动主逻辑
+        }
     }
 
     /** 供 ElytraCollector 联动回滚调用：仅关闭模块（不还原模式/列表） */
